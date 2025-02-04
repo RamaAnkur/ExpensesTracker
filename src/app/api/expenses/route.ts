@@ -35,21 +35,15 @@ export async function POST(req: Request) {
 export async function GET(req: Request) {
   try {
     const session = await getServerSession(authOptions);
-    console.log(session, "session");
     
     if (!session) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
-
-    console.log(session.user.id, "session.user.id");
-
     await connectDB();
-    console.log("Connected to DB");
 
-    console.log("Fetching expenses", Expense);
-    
     const expenses = await Expense.find({ userId: session.user.id })
       .sort({ date: -1 });
+
 
     return NextResponse.json(expenses);
   } catch (error) {

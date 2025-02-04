@@ -83,12 +83,31 @@ export default function SignIn() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [isSignUp, setIsSignUp] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-    // Add your authentication logic here
-    setTimeout(() => setIsLoading(false), 1000); // Simulate API call
+    
+    // Implement your authentication logic here
+    try {
+      const response = await signIn('credentials', {
+        redirect: false,
+        email,
+        password,
+      });
+
+      if (response?.error) {
+        console.error('Sign in error:', response.error);
+        // Handle error (e.g., show a message to the user)
+      } else {
+        window.location.href = '/dashboard';
+      }
+    } catch (error) {
+      console.error('Error during sign in:', error);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleGoogleSignIn = async () => {
@@ -97,6 +116,10 @@ export default function SignIn() {
     } catch (error) {
       console.error('Error signing in with Google:', error);
     }
+  };
+
+  const toggleForm = () => {
+    setIsSignUp(!isSignUp);
   };
 
   return (
@@ -171,7 +194,7 @@ export default function SignIn() {
           </div>
         </motion.div>
 
-        {/* Sign In Form - Right Side */}
+        {/* Sign In / Sign Up Form */}
         <motion.div
           variants={containerVariants}
           initial="hidden"
@@ -179,20 +202,11 @@ export default function SignIn() {
           className="bg-white/95 backdrop-blur-sm p-6 rounded-2xl shadow-xl w-full md:w-2/3 lg:w-1/2 mx-auto"
         >
           <motion.div variants={itemVariants} className="text-center mb-6">
-            <div className="md:hidden flex justify-center mb-4">
-              <motion.div
-                initial={{ rotate: 0 }}
-                animate={{ rotate: 360 }}
-                transition={{ duration: 1, ease: "easeInOut" }}
-                className="bg-purple-600 p-4 rounded-full"
-              >
-                <FaChartLine className="text-3xl text-white" />
-              </motion.div>
-            </div>
-            <h2 className="text-2xl font-bold text-gray-800">Welcome Back</h2>
-            <p className="text-gray-600 mt-2">Please sign in to continue</p>
+            <h2 className="text-2xl font-bold text-gray-800">{isSignUp ? 'Create Account' : 'Welcome Back'}</h2>
+            <p className="text-gray-600 mt-2">{isSignUp ? 'Please create an account' : 'Please sign in to continue'}</p>
           </motion.div>
 
+          {/* Google Sign In Button */}
           <motion.button
             variants={itemVariants}
             whileHover={{ scale: 1.02 }}
@@ -204,15 +218,7 @@ export default function SignIn() {
             Continue with Google
           </motion.button>
 
-          <motion.div variants={itemVariants} className="relative mb-4">
-            <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-gray-300"></div>
-            </div>
-            <div className="relative flex justify-center text-sm">
-              <span className="px-2 bg-white text-gray-500">Or continue with</span>
-            </div>
-          </motion.div>
-
+          {/* Form */}
           <motion.form variants={itemVariants} onSubmit={handleSubmit} className="space-y-3">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -250,22 +256,7 @@ export default function SignIn() {
               </div>
             </div>
 
-            <div className="flex items-center justify-between">
-              <div className="flex items-center">
-                <input
-                  type="checkbox"
-                  id="remember"
-                  className="h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300 rounded"
-                />
-                <label htmlFor="remember" className="ml-2 block text-sm text-gray-700">
-                  Remember me
-                </label>
-              </div>
-              <a href="#" className="text-sm text-purple-600 hover:text-purple-500">
-                Forgot password?
-              </a>
-            </div>
-
+            {/* Submit Button */}
             <motion.button
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
@@ -281,16 +272,16 @@ export default function SignIn() {
                   className="w-5 h-5 border-2 border-white border-t-transparent rounded-full mx-auto"
                 />
               ) : (
-                'Sign In'
+                isSignUp ? 'Create Account' : 'Sign In'
               )}
             </motion.button>
           </motion.form>
 
           <motion.p variants={itemVariants} className="mt-4 text-center text-sm text-gray-600">
-            New to ExpenseTracker?{' '}
-            <a href="#" className="text-purple-600 hover:text-purple-500 font-medium">
-              Create an account
-            </a>
+            {isSignUp ? 'Already have an account? ' : 'New to ExpenseTracker? '}
+            <button onClick={toggleForm} className="text-purple-600 hover:text-purple-500 font-medium">
+              {isSignUp ? 'Sign In' : 'Create an account'}
+            </button>
           </motion.p>
         </motion.div>
       </div>

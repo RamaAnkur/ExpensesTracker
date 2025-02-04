@@ -1,128 +1,178 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import {
-  Chart as ChartJS,
-  CategoryScale,
-  LinearScale,
-  BarElement,
-  Title,
-  Tooltip,
-  Legend,
-  ArcElement,
-} from 'chart.js';
-import { Bar, Doughnut } from 'react-chartjs-2';
+import { useState, useMemo } from 'react';
+import DatePicker from 'react-datepicker';
+import { AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import 'react-datepicker/dist/react-datepicker.css';
+import { transactions, paymentMethods, categories } from '@/data/transactions';
 
-ChartJS.register(
-  CategoryScale,
-  LinearScale,
-  BarElement,
-  Title,
-  Tooltip,
-  Legend,
-  ArcElement
-);
+const Dashboard = () => {
+  const [dateRange, setDateRange] = useState<[Date | null, Date | null]>([null, null]);
+  const [selectedApp, setSelectedApp] = useState('all');
+  const [startDate, endDate] = dateRange;
 
-export default function Dashboard() {
-  const [expenses, setExpenses] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const filteredData = useMemo(() => {
+    return transactions.filter(transaction => {
+      const transactionDate = new Date(transaction.date);
+      const dateInRange = (!startDate || transactionDate >= startDate) && 
+                         (!endDate || transactionDate <= endDate);
+      const appMatches = selectedApp === 'all' || transaction.paymentMethod === selectedApp;
+      return dateInRange && appMatches;
+    });
+  }, [dateRange, selectedApp]);
 
-  useEffect(() => {
-    fetchExpenses();
-  }, []);
+  // Payment method expenses
+  const paymentMethodExpenses = useMemo(() => {
+    return Object.entries(
+      filteredData.reduce((acc, transaction) => {
+        acc[transaction.paymentMethod] = (acc[transaction.paymentMethod] || 0) + transaction.amount;
+        return acc;
+      }, {} as Record<string, number>)
+    ).map(([name, value]) => ({ name, value }));
+  }, [filteredData]);
 
-  const fetchExpenses = async () => {
-    try {
-      const response = await fetch('/api/expenses', {
-        method: 'GET',
-      });
-      const data = await response.json();
-      setExpenses(data);
-      setLoading(false);
-    } catch (error) {
-      console.error('Error fetching expenses:', error);
-      setLoading(false);
-    }
-  };
+  // Category distribution
+  const categoryDistribution = useMemo(() => {
+    return Object.entries(
+      filteredData.reduce((acc, transaction) => {
+        acc[transaction.category] = (acc[transaction.category] || 0) + transaction.amount;
+        return acc;
+      }, {} as Record<string, number>)
+    ).map(([name, value]) => ({ name, value }));
+  }, [filteredData]);
 
-  const prepareChartData = () => {
-    const categories = {};
-    const monthlyData = {};
-
-    if (Array.isArray(expenses)) {
-      expenses.forEach((expense: any) => {
-        // Category totals
-        if (expense.type === 'expense') {
-          categories[expense.category] = (categories[expense.category] || 0) + expense.amount;
-        }
-
-        // Monthly totals
-        const date = new Date(expense.date);
-        const monthYear = `${date.getMonth() + 1}/${date.getFullYear()}`;
-        if (!monthlyData[monthYear]) {
-          monthlyData[monthYear] = { income: 0, expense: 0 };
-        }
-        monthlyData[monthYear][expense.type] += expense.amount;
-      });
-    }
-
-    return { categories, monthlyData };
-  };
-
-  if (loading) {
-    return <div>Loading...</div>;
-  }
-
-  const { categories, monthlyData } = prepareChartData();
-
-  const barChartData = {
-    labels: Object.keys(monthlyData),
-    datasets: [
-      {
-        label: 'Income',
-        data: Object.values(monthlyData).map((d: any) => d.income),
-        backgroundColor: 'rgba(75, 192, 192, 0.5)',
-      },
-      {
-        label: 'Expenses',
-        data: Object.values(monthlyData).map((d: any) => d.expense),
-        backgroundColor: 'rgba(255, 99, 132, 0.5)',
-      },
-    ],
-  };
-
-  const doughnutData = {
-    labels: Object.keys(categories),
-    datasets: [
-      {
-        data: Object.values(categories),
-        backgroundColor: [
-          '#FF6384',
-          '#36A2EB',
-          '#FFCE56',
-          '#4BC0C0',
-          '#9966FF',
-          '#FF9F40',
-        ],
-      },
-    ],
-  };
+  // Total metrics calculations
+  const totalExpense = filteredData.reduce((sum, item) => sum + item.amount, 0);
+  const averageTransaction = filteredData.length > 0 ? totalExpense / filteredData.length : 0;
+  const largestTransaction = Math.max(...filteredData.map(t => t.amount));
 
   return (
-    <div className="p-6">
-      <h1 className="text-2xl font-bold mb-6">Financial Dashboard</h1>
-      
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div className="bg-white p-4 rounded-lg shadow">
-          <h2 className="text-xl font-semibold mb-4">Monthly Overview</h2>
-          <Bar data={barChartData} />
+    <div className="container mx-auto p-6 bg-gray-50 min-h-screen">
+      <h1 className="text-3xl font-bold mb-8 text-gray-800">Expense Dashboard</h1>
+
+      {/* Filter Section */}
+      <div className="bg-white p-4 rounded-lg shadow-sm mb-6 flex flex-wrap gap-4 items-center">
+        <div className="flex items-center gap-2">
+          <label className="text-sm text-gray-600">Date Range:</label>
+          <DatePicker
+            selectsRange={true}
+            startDate={startDate}
+            endDate={endDate}
+            onChange={(update) => setDateRange(update)}
+            isClearable={true}
+            placeholderText="Select date range"
+            className="p-2 border rounded w-64"
+          />
         </div>
         
-        <div className="bg-white p-4 rounded-lg shadow">
-          <h2 className="text-xl font-semibold mb-4">Expense Categories</h2>
-          <Doughnut data={doughnutData} />
+        <div className="flex items-center gap-2">
+          <label className="text-sm text-gray-600">Payment Method:</label>
+          <select
+            className="p-2 border rounded w-40"
+            value={selectedApp}
+            onChange={(e) => setSelectedApp(e.target.value)}
+          >
+            <option value="all">All Methods</option>
+            {Object.keys(paymentMethods).map(method => (
+              <option key={method} value={method}>
+                {method}
+              </option>
+            ))}
+          </select>
+        </div>
+      </div>
+
+      {/* Metrics Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+        <div className="bg-white p-4 rounded-lg shadow-sm border-l-4 border-blue-500">
+          <h3 className="text-gray-500 text-sm">Total Expenses</h3>
+          <p className="text-2xl font-bold text-indigo-600">
+            ₹{totalExpense.toLocaleString('en-IN')}
+          </p>
+        </div>
+        <div className="bg-white p-4 rounded-lg shadow-sm border-l-4 border-green-500">
+          <h3 className="text-gray-500 text-sm">Average Transaction</h3>
+          <p className="text-2xl font-bold text-green-600">
+            ₹{averageTransaction.toLocaleString('en-IN', { maximumFractionDigits: 0 })}
+          </p>
+        </div>
+        <div className="bg-white p-4 rounded-lg shadow-sm border-l-4 border-purple-500">
+          <h3 className="text-gray-500 text-sm">Largest Transaction</h3>
+          <p className="text-2xl font-bold text-purple-600">
+            ₹{largestTransaction.toLocaleString('en-IN')}
+          </p>
+        </div>
+      </div>
+
+      {/* Charts Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {/* Expense Trend Chart */}
+        <div className="bg-white p-4 rounded-xl shadow-sm">
+          <h2 className="text-xl font-semibold mb-4 text-gray-800">Expense Trend</h2>
+          <ResponsiveContainer width="100%" height={400}>
+            <AreaChart data={filteredData}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="date" />
+              <YAxis />
+              <Tooltip />
+              <Area 
+                type="monotone" 
+                dataKey="amount" 
+                stroke="#6366f1" 
+                fill="#818cf8" 
+                fillOpacity={0.3} 
+              />
+            </AreaChart>
+          </ResponsiveContainer>
+        </div>
+
+        {/* Category Distribution */}
+        <div className="bg-white p-4 rounded-xl shadow-sm">
+          <h2 className="text-xl font-semibold mb-4 text-gray-800">Category Distribution</h2>
+          <ResponsiveContainer width="100%" height={400}>
+            <PieChart>
+              <Pie
+                data={categoryDistribution}
+                dataKey="value"
+                nameKey="name"
+                cx="50%"
+                cy="50%"
+                outerRadius={100}
+                label
+              >
+                {categoryDistribution.map((entry, index) => (
+                  <Cell 
+                    key={index} 
+                    fill={categories[entry.name as keyof typeof categories].color} 
+                  />
+                ))}
+              </Pie>
+              <Tooltip />
+              <Legend />
+            </PieChart>
+          </ResponsiveContainer>
+        </div>
+
+        {/* Payment Method Distribution */}
+        <div className="bg-white p-4 rounded-xl shadow-sm">
+          <h2 className="text-xl font-semibold mb-4 text-gray-800">Payment Methods</h2>
+          <ResponsiveContainer width="100%" height={400}>
+            <BarChart data={paymentMethodExpenses}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="name" />
+              <YAxis />
+              <Tooltip />
+              <Bar 
+                dataKey="value" 
+                fill="#6366f1" 
+                radius={[4, 4, 0, 0]}
+              />
+            </BarChart>
+          </ResponsiveContainer>
         </div>
       </div>
     </div>
   );
-} 
+};
+
+export default Dashboard;
