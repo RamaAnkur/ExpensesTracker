@@ -14,6 +14,7 @@
     "@types/react-datepicker": "^7.0.0",
     "@types/recharts": "^1.8.29",
     "chart.js": "^4.4.7",
+    "clsx": "^2.1.1",
     "csv-stringify": "^6.5.2",
     "framer-motion": "^12.0.11",
     "mongodb": "^6.13.0",
@@ -25,7 +26,8 @@
     "react-datepicker": "^8.0.0",
     "react-dom": "^19.0.0",
     "react-icons": "^5.4.0",
-    "recharts": "^2.15.1"
+    "recharts": "^2.15.1",
+    "tailwind-merge": "^3.0.1"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",
